@@ -226,8 +226,10 @@ class operand_matrix(object):
                               num_cols=-1):
         if num_rows == -1:
             num_rows = self.ofmap_px_per_filt
+            #print("num_rows: ", num_rows)
         if num_cols == -1:
             num_cols = self.conv_window_size
+            #print("num_cols: ", num_cols)
         my_name = 'operand_matrix.get_ifmap_matrix_part(): '
         err_prefix = 'Error: ' + my_name
         if not self.matrices_ready_flag:
@@ -260,8 +262,10 @@ class operand_matrix(object):
 
         if num_rows == -1:
             num_rows = self.conv_window_size
+            #print("num_rows: ", num_rows)
         if num_cols == -1:
             num_cols = self.num_filters
+            #print("num_cols: ", num_cols)
         my_name = 'operand_matrix.get_filter_matrix_part(): '
         err_prefix = 'Error: ' + my_name
         if not self.matrices_ready_flag:
@@ -298,8 +302,10 @@ class operand_matrix(object):
         # This is an alternate way of making the matrix dimensions as defaults
         if num_rows == -1:
             num_rows = self.ofmap_px_per_filt
+            #print("num_rows: ", num_rows)
         if num_cols == -1:
             num_cols = self.num_filters
+            #print("num_rows: ", num_cols)
         my_name = 'operand_matrix.get_ofmap_matrix_part(): '
         err_prefix = 'Error: ' + my_name
         if not self.matrices_ready_flag:

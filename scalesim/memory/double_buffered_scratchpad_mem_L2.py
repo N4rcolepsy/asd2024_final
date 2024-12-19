@@ -10,9 +10,20 @@ from scalesim.memory.write_port import write_port as wrport
 
 
 class double_buffered_scratchpad:
-    def __init__(self):
-        self.ifmap_buf = rdbuf()
-        self.filter_buf = rdbuf()
+    def __init__(self,double_buffer=True):
+        
+        self.double_buffer =double_buffer
+
+        if self.double_buffer :
+            self.ifmap_L1_buf = rdbuf()
+            self.filter_L1_buf = rdbuf()   
+            self.ifmap_L2_buf = rdbuf()
+            self.filter_L2_buf = rdbuf()
+        
+        else :
+            self.ifmap_buf = rdbuf()
+            self.filter_buf = rdbuf()
+        
         self.ofmap_buf =wrbuf()
 
         self.ifmap_port = rdport()
@@ -67,20 +78,53 @@ class double_buffered_scratchpad:
         self.estimate_bandwidth_mode = estimate_bandwidth_mode
 
         if self.estimate_bandwidth_mode:
-            self.ifmap_buf = rdbuf_est()
-            self.filter_buf = rdbuf_est()
 
-            self.ifmap_buf.set_params(backing_buf_obj=self.ifmap_port,
-                                      total_size_bytes=ifmap_buf_size_bytes,
-                                      word_size=word_size,
-                                      active_buf_frac=rd_buf_active_frac,
-                                      backing_buf_default_bw=ifmap_backing_buf_bw)
+            if self.double_buffer  :
+            
+                self.ifmap_L1_buf = rdbuf_est()
+                self.filter_L1_buf = rdbuf_est()
+                self.ifmap_L2_buf = rdbuf_est()
+                self.filter_L2_buf = rdbuf_est()
 
-            self.filter_buf.set_params(backing_buf_obj=self.filter_port,
-                                       total_size_bytes=filter_buf_size_bytes,
-                                       word_size=word_size,
-                                       active_buf_frac=rd_buf_active_frac,
-                                       backing_buf_default_bw=filter_backing_buf_bw)
+                self.ifmap_L1_buf.set_params(backing_buf_obj=self.ifmap_L2_buf,
+                                        total_size_bytes=ifmap_buf_size_bytes,
+                                        word_size=word_size,
+                                        active_buf_frac=rd_buf_active_frac,
+                                        backing_buf_default_bw=ifmap_backing_buf_bw)
+
+                self.ifmap_L2_buf.set_params(backing_buf_obj=self.ifmap_port,
+                                        total_size_bytes=ifmap_buf_size_bytes*2,
+                                        word_size=word_size,
+                                        active_buf_frac=rd_buf_active_frac,
+                                        backing_buf_default_bw=ifmap_backing_buf_bw)
+
+                self.filter_L1_buf.set_params(backing_buf_obj=self.filter_L2_buf,
+                                        total_size_bytes=filter_buf_size_bytes,
+                                        word_size=word_size,
+                                        active_buf_frac=rd_buf_active_frac,
+                                        backing_buf_default_bw=filter_backing_buf_bw)
+
+                self.filter_L2_buf.set_params(backing_buf_obj=self.filter_port,
+                                        total_size_bytes=filter_buf_size_bytes*2,
+                                        word_size=word_size,
+                                        active_buf_frac=rd_buf_active_frac,
+                                        backing_buf_default_bw=filter_backing_buf_bw)
+            else:
+
+                self.ifmap_buf = rdbuf_est()
+                self.filter_buf = rdbuf_est()
+
+                self.ifmap_buf.set_params(backing_buf_obj=self.ifmap_port,
+                                        total_size_bytes=ifmap_buf_size_bytes,
+                                        word_size=word_size,
+                                        active_buf_frac=rd_buf_active_frac,
+                                        backing_buf_default_bw=ifmap_backing_buf_bw)
+
+                self.filter_buf.set_params(backing_buf_obj=self.filter_port,
+                                        total_size_bytes=filter_buf_size_bytes,
+                                        word_size=word_size,
+                                        active_buf_frac=rd_buf_active_frac,
+                                        backing_buf_default_bw=filter_backing_buf_bw)
         else:
             self.ifmap_buf = rdbuf()
             self.filter_buf = rdbuf()
@@ -113,21 +157,43 @@ class double_buffered_scratchpad:
                                        filter_prefetch_mat=np.zeros((1,1))
                                        ):
 
-        self.ifmap_buf.set_fetch_matrix(ifmap_prefetch_mat)
-        self.filter_buf.set_fetch_matrix(filter_prefetch_mat)
+        if self.double_buffer :
+            self.ifmap_L1_buf.set_fetch_matrix(ifmap_prefetch_mat)
+            self.ifmap_L2_buf.set_fetch_matrix(ifmap_prefetch_mat)
+            self.filter_L1_buf.set_fetch_matrix(filter_prefetch_mat)
+            self.filter_L2_buf.set_fetch_matrix(filter_prefetch_mat)
+            
+            
+        else:
+            self.ifmap_buf.set_fetch_matrix(ifmap_prefetch_mat)
+            self.filter_buf.set_fetch_matrix(filter_prefetch_mat)
 
     #
     def reset_buffer_states(self):
 
-        self.ifmap_buf.reset()
-        self.filter_buf.reset()
-        self.ofmap_buf.reset()
+
+        if self.double_buffer :
+
+            self.ifmap_L1_buf.reset()
+            self.ifmap_L2_buf.reset()
+            self.filter_L1_buf.reset()
+            self.filter_L2_buf.reset()
+            self.ofmap_buf.reset()
+        else: 
+
+            self.ifmap_buf.reset()
+            self.filter_buf.reset()
+            self.ofmap_buf.reset()
 
     # The following are just shell methods for users to control each mem individually
     def service_ifmap_reads(self,
                             incoming_requests_arr_np,   # 2D array with the requests
                             incoming_cycles_arr):
-        out_cycles_arr_np = self.ifmap_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
+        if self.double_buffer :
+            out_cycles_arr_np = self.ifmap_L1_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
+
+        else:
+            out_cycles_arr_np = self.ifmap_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
 
         return out_cycles_arr_np
 
@@ -135,7 +201,11 @@ class double_buffered_scratchpad:
     def service_filter_reads(self,
                             incoming_requests_arr_np,   # 2D array with the requests
                             incoming_cycles_arr):
-        out_cycles_arr_np = self.filter_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
+        if self.double_buffer :
+
+            out_cycles_arr_np = self.filter_L1_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
+        else:
+            out_cycles_arr_np = self.filter_buf.service_reads(incoming_requests_arr_np, incoming_cycles_arr)
 
         return out_cycles_arr_np
 
@@ -147,86 +217,80 @@ class double_buffered_scratchpad:
         out_cycles_arr_np = self.ofmap_buf.service_writes(incoming_requests_arr_np, incoming_cycles_arr)
 
         return out_cycles_arr_np
-        
-        
+
+    #
     def service_memory_requests(self, ifmap_demand_mat, filter_demand_mat, ofmap_demand_mat):
-        # 메모리 요청을 처리하는 함수
-        # 주어진 ifmap, filter, ofmap 요청 행렬을 순회하면서, 각 사이클별로
-        # 메모리(버퍼)에서 데이터를 읽거나 쓰는 동작을 시뮬레이션한다.
-        
-        # 파라미터 유효성 확인
         assert self.params_valid_flag, 'Memories not initialized yet'
 
-        # ofmap_demand_mat의 총 라인 수(각 라인은 특정 cycle에 요청되는 데이터 집합)
         ofmap_lines = ofmap_demand_mat.shape[0]
 
-        # 총 사이클, stall(대기) 사이클 수 초기화
         self.total_cycles = 0
         self.stall_cycles = 0
 
-        # ifmap, filter 버퍼 hit latency(히트 시 기본 대기 시간)를 가져온다.
-        ifmap_hit_latency = self.ifmap_buf.get_hit_latency()
-        filter_hit_latency = self.filter_buf.get_hit_latency()
+        if self.double_buffer:
 
-        # 각 ifmap, filter, ofmap 요청 라인이 처리된 cycle을 기록할 리스트
+            ifmap_hit_latency = self.ifmap_L1_buf.get_hit_latency()
+            filter_hit_latency = self.filter_L1_buf.get_hit_latency()
+        else:
+            ifmap_hit_latency = self.ifmap_buf.get_hit_latency()
+            filter_hit_latency = self.filter_buf.get_hit_latency()
+
         ifmap_serviced_cycles = []
         filter_serviced_cycles = []
         ofmap_serviced_cycles = []
 
-        # 진행 상황 표시용 프로그레스 바 비활성 여부 결정
         pbar_disable = not self.verbose
-
-        # ofmap_lines 만큼 반복
         for i in tqdm(range(ofmap_lines), disable=pbar_disable):
 
-            # 현재 라인 처리 시작 사이클: i번째 라인 + 지금까지 발생한 stall 사이클을 더해준다.
             cycle_arr = np.zeros((1,1)) + i + self.stall_cycles
 
-            # 현재 라인에 해당하는 ifmap 요청 부분 추출 (1행으로 reshape)
             ifmap_demand_line = ifmap_demand_mat[i, :].reshape((1,ifmap_demand_mat.shape[1]))
-            # ifmap 버퍼에서 읽기 요청 처리
-            ifmap_cycle_out = self.ifmap_buf.service_reads(incoming_requests_arr_np=ifmap_demand_line,
-                                                        incoming_cycles_arr=cycle_arr)
-            # 처리 완료 후 ifmap 요청이 완료된 사이클 기록
-            ifmap_serviced_cycles += [ifmap_cycle_out[0]]
-            # ifmap stall 계산: 실제 완료 사이클 - 시작 사이클 - 히트 대기 시간
-            ifmap_stalls = ifmap_cycle_out[0] - cycle_arr[0] - ifmap_hit_latency
-            # print(ifmap_cycle_out[0], cycle_arr[0], ifmap_hit_latency)
-
-            # filter 요청 처리
-            filter_demand_line = filter_demand_mat[i, :].reshape((1, filter_demand_mat.shape[1]))
-            filter_cycle_out = self.filter_buf.service_reads(incoming_requests_arr_np=filter_demand_line,
+            
+            if self.double_buffer :
+                ifmap_cycle_out = self.ifmap_L1_buf.service_reads(incoming_requests_arr_np=ifmap_demand_line,
                                                             incoming_cycles_arr=cycle_arr)
-            filter_serviced_cycles += [filter_cycle_out[0]]
-            # filter stall 계산
-            filter_stalls = filter_cycle_out[0] - cycle_arr[0] - filter_hit_latency
-            # print(filter_cycle_out[0], cycle_arr[0], filter_hit_latency)
+            else:
+                ifmap_cycle_out = self.ifmap_buf.service_reads(incoming_requests_arr_np=ifmap_demand_line,
+                                                            incoming_cycles_arr=cycle_arr)
+            ifmap_serviced_cycles += [ifmap_cycle_out[0]]
+            ifmap_stalls = ifmap_cycle_out[0] - cycle_arr[0] - ifmap_hit_latency
 
-            # ofmap 요청 처리 (쓰기 요청)
+            filter_demand_line = filter_demand_mat[i, :].reshape((1, filter_demand_mat.shape[1]))
+
+            if self.double_buffer:
+                filter_cycle_out = self.filter_L1_buf.service_reads(incoming_requests_arr_np=filter_demand_line,
+                                                           incoming_cycles_arr=cycle_arr)
+            else:
+                filter_cycle_out = self.filter_buf.service_reads(incoming_requests_arr_np=filter_demand_line,
+                                                           incoming_cycles_arr=cycle_arr)
+            filter_serviced_cycles += [filter_cycle_out[0]]
+            filter_stalls = filter_cycle_out[0] - cycle_arr[0] - filter_hit_latency
+
             ofmap_demand_line = ofmap_demand_mat[i, :].reshape((1, ofmap_demand_mat.shape[1]))
             ofmap_cycle_out = self.ofmap_buf.service_writes(incoming_requests_arr_np=ofmap_demand_line,
-                                                            incoming_cycles_arr_np=cycle_arr)
+                                                             incoming_cycles_arr_np=cycle_arr)
             ofmap_serviced_cycles += [ofmap_cycle_out[0]]
-            # ofmap stall 계산
             ofmap_stalls = ofmap_cycle_out[0] - cycle_arr[0]
-            # print(ofmap_cycle_out[0], cycle_arr[0])
 
-            # 이번 라인에서 발생한 stall 중 최댓값을 누적
             self.stall_cycles += int(max(ifmap_stalls[0], filter_stalls[0], ofmap_stalls[0]))
-            # if int(max(ifmap_stalls[0], filter_stalls[0], ofmap_stalls[0])) > 0:
-            #     print(self.stall_cycles, ifmap_stalls[0], filter_stalls[0], ofmap_stalls[0])
 
-        # estimate_bandwidth_mode일 경우, 모든 prefetch 완료 처리
         if self.estimate_bandwidth_mode:
-            self.ifmap_buf.complete_all_prefetches()
-            self.filter_buf.complete_all_prefetches()
+            # IDE shows warning as complete_all_prefetches is not implemented in read_buffer class
+            # It is harmless since, in estimate bandwidth mode, read_buffer_estimate_bw is instantiated
+            if self.double_buffer:
+                self.ifmap_L1_buf.complete_all_prefetches()
+                self.ifmap_L2_buf.complete_all_prefetches()
+                self.filter_L1_buf.complete_all_prefetches()
+                self.filter_L2_buf.complete_all_prefetches()
 
-        # ofmap 버퍼에 남아있는 데이터(쓰기 요청)를 모두 비움
+            else:
+                self.ifmap_buf.complete_all_prefetches()
+                self.filter_buf.complete_all_prefetches()
+
         self.ofmap_buf.empty_all_buffers(ofmap_serviced_cycles[-1])
 
-        # 읽기/쓰기 처리 완료 사이클 기록을 numpy 형태로 변환
+        # Prepare the traces
         ifmap_services_cycles_np = np.asarray(ifmap_serviced_cycles).reshape((len(ifmap_serviced_cycles), 1))
-        # ifmap trace: (처리 완료 사이클 + 요청 주소 정보) 형태
         self.ifmap_trace_matrix = np.concatenate((ifmap_services_cycles_np, ifmap_demand_mat), axis=1)
 
         filter_services_cycles_np = np.asarray(filter_serviced_cycles).reshape((len(filter_serviced_cycles), 1))
@@ -234,13 +298,10 @@ class double_buffered_scratchpad:
 
         ofmap_services_cycles_np = np.asarray(ofmap_serviced_cycles).reshape((len(ofmap_serviced_cycles), 1))
         self.ofmap_trace_matrix = np.concatenate((ofmap_services_cycles_np, ofmap_demand_mat), axis=1)
-
-        # 총 처리에 걸린 사이클 수: 마지막 ofmap 처리 완료 사이클을 전체 사이클로 설정
         self.total_cycles = int(ofmap_serviced_cycles[-1][0])
 
-        # 트레이스 생성 완료 표시
+        # END of serving demands from memory
         self.traces_valid = True
-
 
     # This is the trace computation logic of this memory system
     # Anand: This is too complex, perform the serve cycle by cycle for the requests
@@ -482,9 +543,15 @@ class double_buffered_scratchpad:
     def get_ifmap_dram_details(self):
         assert self.traces_valid, 'Traces not generated yet'
 
-        self.ifmap_dram_reads = self.ifmap_buf.get_num_accesses()
-        self.ifmap_dram_start_cycle, self.ifmap_dram_stop_cycle \
-            = self.ifmap_buf.get_external_access_start_stop_cycles()
+
+        if self.double_buffer :
+            self.ifmap_dram_reads = self.ifmap_L2_buf.get_num_accesses()
+            self.ifmap_dram_start_cycle, self.ifmap_dram_stop_cycle \
+                = self.ifmap_L2_buf.get_external_access_start_stop_cycles()
+        else:
+            self.ifmap_dram_reads = self.ifmap_buf.get_num_accesses()
+            self.ifmap_dram_start_cycle, self.ifmap_dram_stop_cycle \
+                = self.ifmap_buf.get_external_access_start_stop_cycles()
 
         return self.ifmap_dram_start_cycle, self.ifmap_dram_stop_cycle, self.ifmap_dram_reads
 
@@ -492,9 +559,15 @@ class double_buffered_scratchpad:
     def get_filter_dram_details(self):
         assert self.traces_valid, 'Traces not generated yet'
 
-        self.filter_dram_reads = self.filter_buf.get_num_accesses()
-        self.filter_dram_start_cycle, self.filter_dram_stop_cycle \
-            = self.filter_buf.get_external_access_start_stop_cycles()
+        if self.double_buffer :
+            self.filter_dram_reads = self.filter_L2_buf.get_num_accesses()
+            self.filter_dram_start_cycle, self.filter_dram_stop_cycle \
+                = self.filter_L2_buf.get_external_access_start_stop_cycles()
+
+        else:
+            self.filter_dram_reads = self.filter_buf.get_num_accesses()
+            self.filter_dram_start_cycle, self.filter_dram_stop_cycle \
+                = self.filter_buf.get_external_access_start_stop_cycles()
 
         return self.filter_dram_start_cycle, self.filter_dram_stop_cycle, self.filter_dram_reads
 
@@ -530,11 +603,21 @@ class double_buffered_scratchpad:
 
     #
     def get_ifmap_dram_trace_matrix(self):
-        return self.ifmap_buf.get_trace_matrix()
+
+        if self.double_buffer:
+        
+            return self.ifmap_L2_buf.get_trace_matrix()
+        else:
+
+            return self.ifmap_buf.get_trace_matrix()
 
     #
     def get_filter_dram_trace_matrix(self):
-        return self.filter_buf.get_trace_matrix()
+
+        if self.double_buffer:
+            return self.filter_L2_buf.get_trace_matrix()
+        else:
+            return self.filter_buf.get_trace_matrix()
 
     #
     def get_ofmap_dram_trace_matrix(self):
@@ -542,9 +625,16 @@ class double_buffered_scratchpad:
 
     #
     def get_dram_trace_matrices(self):
-        dram_ifmap_trace = self.ifmap_buf.get_trace_matrix()
-        dram_filter_trace = self.filter_buf.get_trace_matrix()
-        dram_ofmap_trace = self.ofmap_buf.get_trace_matrix()
+
+        if self.double_buffer:
+
+            dram_ifmap_trace = self.ifmap_L2_buf.get_trace_matrix()
+            dram_filter_trace = self.filter_L2_buf.get_trace_matrix()
+            dram_ofmap_trace = self.ofmap_buf.get_trace_matrix()
+        else: 
+            dram_ifmap_trace = self.ifmap_buf.get_trace_matrix()
+            dram_filter_trace = self.filter_buf.get_trace_matrix()
+            dram_ofmap_trace = self.ofmap_buf.get_trace_matrix()
 
         return dram_ifmap_trace, dram_filter_trace, dram_ofmap_trace
 
@@ -565,11 +655,18 @@ class double_buffered_scratchpad:
 
     #
     def print_ifmap_dram_trace(self, filename):
-        self.ifmap_buf.print_trace(filename)
+
+        if self.double_buffer:
+            self.ifmap_L2_buf.print_trace(filename)
+        else :
+            self.ifmap_buf.print_trace(filename)
 
     #
     def print_filter_dram_trace(self, filename):
-        self.filter_buf.print_trace(filename)
+        if self.double_buffer:
+            self.filter_L2_buf.print_trace(filename)
+        else:
+            self.filter_buf.print_trace(filename)
 
     #
     def print_ofmap_dram_trace(self, filename):

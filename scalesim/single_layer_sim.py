@@ -7,6 +7,7 @@ from scalesim.compute.systolic_compute_os import systolic_compute_os
 from scalesim.compute.systolic_compute_ws import systolic_compute_ws
 from scalesim.compute.systolic_compute_is import systolic_compute_is
 from scalesim.memory.double_buffered_scratchpad_mem import double_buffered_scratchpad as mem_dbsp
+#from scalesim.memory.double_buffered_scratchpad_mem_L2 import double_buffered_scratchpad as mem_dbsp
 
 
 class single_layer_sim:
@@ -123,10 +124,14 @@ class single_layer_sim:
 
         # 1.3 Get the no compute demand matrices from for 2 operands and the output
         ifmap_prefetch_mat, filter_prefetch_mat = self.compute_system.get_prefetch_matrices()
+        #print("ifmap_prefetch_mat, filter_prefetch_mat: ", ifmap_prefetch_mat.shape, filter_prefetch_mat.shape)
         ifmap_demand_mat, filter_demand_mat, ofmap_demand_mat = self.compute_system.get_demand_matrices()
+        #print("ifmap_demand_mat, filter_demand_mat, ofmap_demand_mat: ", ifmap_demand_mat.shape, filter_demand_mat.shape, ofmap_demand_mat.shape)
+        #print(ifmap_demand_mat)
         #print('DEBUG: Compute operations done')
         # 2. Setup the memory system and run the demands through it to find any memory bottleneck and generate traces
 
+        #print(self.memory_system_ready_flag)
         # 2.1 Setup the memory system if it was not setup externally
         if not self.memory_system_ready_flag:
             word_size = 1           # bytes, this can be incorporated in the config file

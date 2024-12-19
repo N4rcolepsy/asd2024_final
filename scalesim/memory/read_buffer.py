@@ -130,6 +130,7 @@ class read_buffer:
 
             self.fetch_matrix[dest_row][dest_col] = fetch_matrix_np[src_row][src_col]
 
+        #print("fetch_matrix: ", self.fetch_matrix)
         # Once the fetch matrices are set, populate the data structure for fast lookups and servicing
         self.prepare_hashed_buffer()
 
