@@ -86,17 +86,26 @@ class double_buffered_scratchpad:
                 self.ifmap_L2_buf = rdbuf_est()
                 self.filter_L2_buf = rdbuf_est()
 
+                self.ifmap_CSC_buf = rdbuf_est()
+
                 self.ifmap_L1_buf.set_params(backing_buf_obj=self.ifmap_L2_buf,
                                         total_size_bytes=ifmap_buf_size_bytes,
                                         word_size=word_size,
                                         active_buf_frac=rd_buf_active_frac,
                                         backing_buf_default_bw=ifmap_backing_buf_bw)
 
-                self.ifmap_L2_buf.set_params(backing_buf_obj=self.ifmap_port,
+                self.ifmap_L2_buf.set_params(backing_buf_obj=self.ifmap_CSC,
                                         total_size_bytes=ifmap_buf_size_bytes*2,
                                         word_size=word_size,
                                         active_buf_frac=rd_buf_active_frac,
                                         backing_buf_default_bw=ifmap_backing_buf_bw)
+                
+                self.ifmap_CSC_buf.set_params(backing_buf_obj=self.ifmap_port,
+                                        total_size_bytes=ifmap_buf_size_bytes*4,
+                                        word_size=word_size,
+                                        active_buf_frac=rd_buf_active_frac,
+                                        backing_buf_default_bw=ifmap_backing_buf_bw,
+                                        hit_latency=self.arraysize)
 
                 self.filter_L1_buf.set_params(backing_buf_obj=self.filter_L2_buf,
                                         total_size_bytes=filter_buf_size_bytes,
