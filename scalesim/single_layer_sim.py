@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 # activation csc compression ratio 불러오기
-csv_file = "/home/ondevice/activation_compress_ratios.csv"
+csv_file = "./activation_compress_ratios.csv"
 act_comp_ratio = pd.read_csv(csv_file)
 # NaN 값 제거 및 Layer id 정리
 act_comp_ratio = act_comp_ratio.dropna(subset=['Layer id'])
