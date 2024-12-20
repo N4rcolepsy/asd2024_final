@@ -1,7 +1,7 @@
 # Config File Path
 TOPOLOGY_FILE="../topologies/mlperf/Resnet50.csv"
-CONFIG_FILE="../configs/eyeriss_os_pe32.cfg"
-LOG_DIR="../test_runs/modified"
+CONFIG_FILE="../configs/csc/eyeriss_os_32_64.cfg"
+LOG_DIR="../test_runs/csc"
 INPUT_TYPE="conv"
 
 #Run ScaleSim
