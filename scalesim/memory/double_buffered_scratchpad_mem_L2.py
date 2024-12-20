@@ -101,11 +101,10 @@ class double_buffered_scratchpad:
                                         backing_buf_default_bw=ifmap_backing_buf_bw)
                 
                 self.ifmap_CSC_buf.set_params(backing_buf_obj=self.ifmap_port,
-                                        total_size_bytes=ifmap_buf_size_bytes*4,
+                                        total_size_bytes=ifmap_buf_size_bytes*2,
                                         word_size=word_size,
                                         active_buf_frac=rd_buf_active_frac,
-                                        backing_buf_default_bw=ifmap_backing_buf_bw,
-                                        hit_latency=array_row)
+                                        backing_buf_default_bw=ifmap_backing_buf_bw)
 
                 self.filter_L1_buf.set_params(backing_buf_obj=self.filter_L2_buf,
                                         total_size_bytes=filter_buf_size_bytes,
@@ -154,7 +153,7 @@ class double_buffered_scratchpad:
                                              backing_buf_bw=ifmap_backing_buf_bw)
 
                 self.ifmap_CSC_buf.set_params(backing_buf_obj=self.ifmap_port,
-                                             total_size_bytes=ifmap_buf_size_bytes * 4,
+                                             total_size_bytes=ifmap_buf_size_bytes * 2,
                                              word_size=word_size,
                                              active_buf_frac=rd_buf_active_frac,
                                              backing_buf_bw=ifmap_backing_buf_bw)
