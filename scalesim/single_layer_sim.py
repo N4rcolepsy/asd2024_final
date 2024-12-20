@@ -6,7 +6,8 @@ from scalesim.compute.operand_matrix import operand_matrix as opmat
 from scalesim.compute.systolic_compute_os import systolic_compute_os
 from scalesim.compute.systolic_compute_ws import systolic_compute_ws
 from scalesim.compute.systolic_compute_is import systolic_compute_is
-from scalesim.memory.double_buffered_scratchpad_mem_L2 import double_buffered_scratchpad as mem_dbsp
+#from scalesim.memory.double_buffered_scratchpad_mem_L2 import double_buffered_scratchpad as mem_dbsp
+from scalesim.memory.double_buffered_scratchpad_mem import double_buffered_scratchpad as mem_dbsp
 
 import numpy as np
 import pandas as pd
@@ -160,6 +161,7 @@ class single_layer_sim:
                 # ifmap_backing_bw = 현재 ifmap csc 압축률 * user_dram_bandwidth (정수 내림)
                 i_bw = act_comp_ratio.loc[act_comp_ratio['Layer id'] == self.layer_id, 'i_bw'].values[0]
                 ifmap_backing_bw = np.floor(bws[0] * i_bw).astype(int)
+                ifmap_backing_bw = bws[0]
                 
                 # filter_backing_bw
                 filter_backing_bw = bws[0]
@@ -167,6 +169,7 @@ class single_layer_sim:
                 # ofmap_backing_bw = 다음 ifmap csc 압축률 * user_dram_bandwidth (정수 내림)
                 o_bw = act_comp_ratio.loc[act_comp_ratio['Layer id'] == self.layer_id, 'o_bw'].values[0]
                 ofmap_backing_bw = np.floor(bws[0] * o_bw).astype(int)
+                ofmap_backing_bw = bws[0]
 
             else:
                 dataflow = self.config.get_dataflow()
@@ -189,7 +192,6 @@ class single_layer_sim:
                     ofmap_backing_buf_bw=ofmap_backing_bw,
                     verbose=self.verbose,
                     estimate_bandwidth_mode=estimate_bandwidth_mode,
-                    array_row=self.config.get_array_dims()[0]
             )
 
         # 2.2 Install the prefetch matrices to the read buffers to finish setup
